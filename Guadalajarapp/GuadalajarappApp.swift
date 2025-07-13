@@ -6,12 +6,29 @@
 //
 
 import SwiftUI
+import FirebaseCore // 1. Add this import for Firebase
+
+// 2. Define the AppDelegate class
+class AppDelegate: NSObject, UIApplicationDelegate {
+  func application(_ application: UIApplication,
+                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    FirebaseApp.configure() // 3. Configure Firebase
+    print("Firebase configured successfully!") // Optional: for debugging
+    return true
+  }
+}
 
 @main
 struct GuadalajarappApp: App {
+    // 4. Register app delegate for Firebase setup
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // It's good practice to wrap your initial view in a NavigationView
+            // if you plan to navigate, which you already do in ContentView.
+            // So, ContentView() is fine here.
+            ContentView() 
         }
     }
 }

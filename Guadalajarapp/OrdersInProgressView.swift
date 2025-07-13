@@ -1,49 +1,66 @@
 import SwiftUI
 
 struct OrdersInProgressView: View {
-    @State private var orders: [Order] = []
-    @State private var expandedOrderId: UUID? // Track which order is expanded
+    @StateObject private var viewModel = OrdersInProgressViewModel()
+    @State private var expandedOrderId: String? // Track which order is expanded, using String for Firestore ID
 
     var body: some View {
         VStack {
-            Text("Orden en Progreso")
+            Text("Órdenes en Progreso")
                 .font(.largeTitle)
                 .padding()
 
-            List {
-                ForEach(orders) { order in
-                    // Collapsible row for each order
-                    DisclosureGroup(isExpanded: Binding<Bool>(
-                        get: { expandedOrderId == order.id },
-                        set: { expandedOrderId = $0 ? order.id : nil }
-                    )) {
-                        // Show only items with quantity > 0 when expanded
-                        ForEach(order.items.filter { $0.quantity > 0 }) { item in
-                            HStack {
-                                Text(item.name)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text("Cantidad: \(item.quantity)")
-                                Text("Total: $\(item.totalItemPrice, specifier: "%.2f")")
+            if viewModel.isLoading {
+                ProgressView("Cargando órdenes...")
+            } else if let errorMessage = viewModel.errorMessage, viewModel.pendingOrders.isEmpty {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding()
+            } else if viewModel.pendingOrders.isEmpty {
+                Text("No hay órdenes en progreso.")
+                    .padding()
+            } else {
+                List {
+                    ForEach(viewModel.pendingOrders) { order in
+                        DisclosureGroup(
+                            isExpanded: Binding<Bool>(
+                                get: { expandedOrderId == order.id },
+                                set: { expandedOrderId = $0 ? order.id : nil }
+                            ),
+                            content: {
+                                ForEach(order.items.filter { $0.quantity > 0 }) { item in
+                                    HStack {
+                                        Text(item.name)
+                                        Spacer()
+                                        Text("Cant: \(item.quantity)")
+                                        Text("$\(item.totalItemPrice, specifier: "%.0f")")
+                                    }
+                                    .padding(.leading, 20)
+                                }
+                                Button(action: {
+                                    if let orderId = order.id {
+                                        viewModel.markOrderAsCompleted(orderId: orderId)
+                                    }
+                                }) {
+                                    Text("Marcar como Completada")
+                                        .foregroundColor(.green)
+                                }
+                                .padding(.top, 5)
+                            },
+                            label: {
+                                HStack {
+                                    Text("Fecha: \(order.date, formatter: orderDateFormatter)")
+                                    Spacer()
+                                    Text("Total: $\(order.totalPrice, specifier: "%.0f")")
+                                }
+                                .font(.headline)
                             }
-                            .padding(.leading, 20)
-                        }
-                    } label: {
-                        // Order summary with date and total price
-                        HStack {
-                            Text("Fecha: \(order.date, formatter: orderDateFormatter)")
-                            Spacer()
-                            Text("Total: $\(order.totalPrice, specifier: "%.2f")")
-                        }
-                        .font(.headline)
+                        )
                     }
                 }
             }
-            .onAppear(perform: loadOrders) // Load orders when the view appears
         }
-    }
-
-    private func loadOrders() {
-        self.orders = DataManager.shared.loadOrders()
+        // .onAppear will be handled by the ViewModel's init
     }
 }
 

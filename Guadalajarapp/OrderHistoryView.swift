@@ -1,64 +1,58 @@
 import SwiftUI
 
 struct OrderHistoryView: View {
-    @State private var orders: [Order] = []
-    @State private var searchQuery: String = ""
-    @State private var filterDate: Date = Date()
-    @State private var isFilteringByDate = false
-
-    var filteredOrders: [Order] {
-        orders.filter { order in
-            // Updated filter criteria to match available properties
-            let matchesDate = !isFilteringByDate || Calendar.current.isDate(order.date, inSameDayAs: filterDate)
-            let matchesItems = searchQuery.isEmpty || order.items.contains { $0.name.localizedCaseInsensitiveContains(searchQuery) }
-            return matchesDate && matchesItems
-        }
-    }
+    @StateObject private var viewModel = OrderHistoryViewModel()
     
     var body: some View {
         VStack {
             Text("Registro de Órdenes")
                 .font(.largeTitle)
                 .padding()
-
-            TextField("Buscar por nombre del item...", text: $searchQuery)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
             
-            Toggle(isOn: $isFilteringByDate) {
-                Text("Filtrar por fecha")
-            }
-            .padding()
-            
-            if isFilteringByDate {
-                DatePicker("Seleccionar Fecha", selection: $filterDate, displayedComponents: .date)
-                    .datePickerStyle(CompactDatePickerStyle())
+            if viewModel.isLoading {
+                ProgressView("Cargando historial...")
+            } else if let errorMessage = viewModel.errorMessage, viewModel.allOrders.isEmpty {
+                Text(errorMessage)
+                    .foregroundColor(.red)
                     .padding()
-            }
-
-            List(filteredOrders) { order in
-                VStack(alignment: .leading) {
-                    Text("Fecha: \(order.date, formatter: orderDateFormatter)")
-                    Text("Total: $\(order.totalPrice, specifier: "%.2f")")
-                    
-                    ForEach(order.items) { item in
-                        Text("Item: \(item.name), Cantidad: \(item.quantity), Precio total: $\(item.totalItemPrice, specifier: "%.2f")")
+            } else if viewModel.allOrders.isEmpty {
+                Text("No hay órdenes en el historial.")
+                    .padding()
+            } else {
+                List(viewModel.allOrders) { order in
+                    VStack(alignment: .leading) {
+                        Text("Fecha: \(order.date, formatter: orderHistoryDateFormatter)") // Use the renamed formatter
+                            .font(.headline)
+                        Text("Total: $\(order.totalPrice, specifier: "%.0f")") // Assuming COP, no decimals
+                        Text("Estado: \(order.status ?? "N/A")") // Display status
+                            .font(.subheadline)
+                        
+                        // Optionally, show items if needed, can be within a DisclosureGroup
+                        DisclosureGroup("Ver Items") {
+                            ForEach(order.items.filter { $0.quantity > 0 }) { item in
+                                HStack {
+                                    Text("• \(item.name)")
+                                    Spacer()
+                                    Text("Cant: \(item.quantity)")
+                                    Text("$\(item.totalItemPrice, specifier: "%.0f")")
+                                }
+                                .font(.caption)
+                                .padding(.leading, 10)
+                            }
+                        }
                     }
+                    .padding(.vertical, 5)
                 }
-                .padding()
             }
-            .onAppear(perform: loadOrders)
         }
         .padding()
-    }
-
-    private func loadOrders() {
-        self.orders = DataManager.shared.loadOrders()
+        // .onAppear is handled by the ViewModel's init
     }
 }
 
 // Date formatter for display purposes
-let dateFormatter: DateFormatter = {
+// Renamed to avoid conflict with the one in OrdersInProgressView
+let orderHistoryDateFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     formatter.timeStyle = .short
