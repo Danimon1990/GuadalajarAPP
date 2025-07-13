@@ -34,43 +34,57 @@ struct OrderView: View {
                 }
                 
                 Section(header: Text("Productos")) {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        TextField("Buscar productos...", text: $viewModel.searchText)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+                    .padding(.vertical, 4)
+                    
                     if viewModel.isLoading {
                         ProgressView("Cargando menú...")
                     } else if viewModel.menuItems.isEmpty && viewModel.errorMessage == nil {
                         Text("No hay productos en el menú en este momento.")
+                    } else if viewModel.filteredMenuItems.isEmpty && !viewModel.searchText.isEmpty {
+                        Text("No se encontraron productos que coincidan con '\(viewModel.searchText)'")
+                            .foregroundColor(.secondary)
                     } else {
                         List {
-                            ForEach($viewModel.menuItems) { $item in // Use $viewModel.menuItems
+                            ForEach(viewModel.filteredMenuItems.indices, id: \.self) { index in
+                                let itemIndex = viewModel.menuItems.firstIndex(where: { $0.id == viewModel.filteredMenuItems[index].id }) ?? 0
+                                
                                 if horizontalSizeClass == .compact {
                                     // Multi-line (vertical) layout for iPhone
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack {
-                                            Text(item.name)
+                                            Text(viewModel.menuItems[itemIndex].name)
                                             Spacer()
-                                            Stepper(value: $item.quantity, in: 0...20) { // Increased max quantity
-                                                Text("\(item.quantity)")
+                                            Stepper(value: $viewModel.menuItems[itemIndex].quantity, in: 0...20) { // Increased max quantity
+                                                Text("\(viewModel.menuItems[itemIndex].quantity)")
                                             }
                                         }
                                         HStack {
-                                            Text("Unit: $\(item.pricePerPortion, specifier: "%.0f")") // No decimals for COP
+                                            Text("Unit: $\(viewModel.menuItems[itemIndex].pricePerPortion, specifier: "%.0f")") // No decimals for COP
                                             Spacer()
-                                            Text("Total: $\(item.totalPrice, specifier: "%.0f")")
+                                            Text("Total: $\(viewModel.menuItems[itemIndex].totalPrice, specifier: "%.0f")")
                                         }
                                     }
                                     .padding(.vertical, 4)
                                 } else {
                                     // Single-row layout for iPad
                                     HStack {
-                                        Text(item.name)
+                                        Text(viewModel.menuItems[itemIndex].name)
                                             .frame(maxWidth: .infinity, alignment: .leading)
-                                        Text("$\(item.pricePerPortion, specifier: "%.0f")")
+                                        Text("$\(viewModel.menuItems[itemIndex].pricePerPortion, specifier: "%.0f")")
                                             .frame(width: 100, alignment: .trailing) // Wider for price
-                                        Stepper(value: $item.quantity, in: 0...20) {
-                                            Text("\(item.quantity)")
+                                        Stepper(value: $viewModel.menuItems[itemIndex].quantity, in: 0...20) {
+                                            Text("\(viewModel.menuItems[itemIndex].quantity)")
                                         }
                                         .frame(width: 120, alignment: .center) // Wider for stepper
                                         // The separate quantity text was redundant with the stepper
-                                        Text("$\(item.totalPrice, specifier: "%.0f")")
+                                        Text("$\(viewModel.menuItems[itemIndex].totalPrice, specifier: "%.0f")")
                                             .frame(width: 100, alignment: .trailing)
                                     }
                                 }

@@ -5,6 +5,7 @@ class OrderViewModel: ObservableObject {
     @Published var menuItems: [MenuItem] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var searchText: String = ""
 
     // Order specific details
     @Published var orderType: String = "Restaurante" // Default, matches web app
@@ -26,6 +27,16 @@ class OrderViewModel: ObservableObject {
         let itemsTotal = menuItems.reduce(0) { $0 + $1.totalPrice }
         let huesoContribution = (huesoPrice >= 20000) ? huesoPrice : 0
         return itemsTotal + huesoContribution
+    }
+    
+    var filteredMenuItems: [MenuItem] {
+        if searchText.isEmpty {
+            return menuItems
+        } else {
+            return menuItems.filter { item in
+                item.name.localizedCaseInsensitiveContains(searchText)
+            }
+        }
     }
 
     init() {
@@ -146,6 +157,7 @@ class OrderViewModel: ObservableObject {
         clientPhone = ""
         clientAddress = ""
         huesoPriceString = ""
+        searchText = ""
         errorMessage = nil // Clear any previous messages
     }
 }
