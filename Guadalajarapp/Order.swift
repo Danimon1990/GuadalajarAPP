@@ -17,9 +17,10 @@ struct Order: Identifiable, Codable {
     var clientPhone: String? // Client's phone number
     var clientAddress: String? // Client's address
     var orderType: String?   // Type of order (Restaurante, Domicilio, Para llevar)
+    var userId: String?      // ID of the authenticated user who placed the order
 
     // Default initializer if needed, especially if you create instances manually
-    init(id: String? = nil, date: Date = Date(), items: [OrderedItem], totalPrice: Double, status: String? = "pending", clientName: String? = nil, clientPhone: String? = nil, clientAddress: String? = nil, orderType: String? = nil) {
+    init(id: String? = nil, date: Date = Date(), items: [OrderedItem], totalPrice: Double, status: String? = "pending", clientName: String? = nil, clientPhone: String? = nil, clientAddress: String? = nil, orderType: String? = nil, userId: String? = nil) {
         self.id = id
         self.date = date
         self.items = items
@@ -29,6 +30,7 @@ struct Order: Identifiable, Codable {
         self.clientPhone = clientPhone
         self.clientAddress = clientAddress
         self.orderType = orderType
+        self.userId = userId
     }
 
     // Add CodingKeys to map Firestore field names to Swift property names
@@ -42,6 +44,7 @@ struct Order: Identifiable, Codable {
         case clientPhone
         case clientAddress
         case orderType
+        case userId
     }
 }
 

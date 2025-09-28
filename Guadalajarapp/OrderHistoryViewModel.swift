@@ -1,56 +1,60 @@
 import SwiftUI
 import FirebaseFirestore
+import FirebaseAuth
 
 class OrderHistoryViewModel: ObservableObject {
     @Published var allOrders: [Order] = []
-    @Published var isLoading: Bool = false
-    @Published var errorMessage: String? = nil
-
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
     private var db = Firestore.firestore()
     private var listenerRegistration: ListenerRegistration?
-
+    
     init() {
         fetchAllOrders()
     }
-
+    
     deinit {
-        listenerRegistration?.remove() // Stop listening when the ViewModel is deallocated
+        listenerRegistration?.remove()
     }
-
+    
     func fetchAllOrders() {
         isLoading = true
         errorMessage = nil
 
         listenerRegistration?.remove()
-
+        
+        // Fetch ALL completed orders (not just user-specific ones)
         listenerRegistration = db.collection("orders")
-            .order(by: "timestamp", descending: true) // Show newest orders first
+            .whereField("status", isEqualTo: "completed")
+            .order(by: "timestamp", descending: true)
             .addSnapshotListener { [weak self] querySnapshot, error in
-                guard let self = self else { return }
                 DispatchQueue.main.async {
-                    self.isLoading = false
+                    self?.isLoading = false
+                    
                     if let error = error {
-                        self.errorMessage = "Error fetching order history: \(error.localizedDescription)"
-                        print("❌ Error fetching order history: \(error.localizedDescription)")
+                        self?.errorMessage = "Error fetching orders: \(error.localizedDescription)"
+                        print("❌ Error fetching completed orders: \(error.localizedDescription)")
                         return
                     }
-
+                    
                     guard let documents = querySnapshot?.documents else {
-                        self.errorMessage = "No orders found in history."
-                        print("No orders found in history.")
-                        self.allOrders = []
+                        self?.allOrders = []
                         return
                     }
-
-                    self.allOrders = documents.compactMap { document -> Order? in
+                    
+                    self?.allOrders = documents.compactMap { document in
                         do {
-                            return try document.data(as: Order.self)
+                            var order = try document.data(as: Order.self)
+                            order.id = document.documentID
+                            return order
                         } catch {
-                            print("❌ Failed to decode order history document \(document.documentID): \(error)")
+                            print("❌ Error decoding order: \(error.localizedDescription)")
                             return nil
                         }
                     }
-                    print("✅ Order history fetched/updated: \(self.allOrders.count) items")
+                    
+                    print("✅ Fetched \(self?.allOrders.count ?? 0) completed orders")
                 }
             }
     }

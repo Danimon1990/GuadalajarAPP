@@ -25,10 +25,7 @@ struct GuadalajarappApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // It's good practice to wrap your initial view in a NavigationView
-            // if you plan to navigate, which you already do in ContentView.
-            // So, ContentView() is fine here.
-            ContentView() 
+            AuthenticationWrapperView()
         }
     }
 }

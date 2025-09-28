@@ -9,9 +9,18 @@ struct OrderView: View {
 
     var body: some View {
         VStack {
-            Text("Nueva Orden")
-                .font(.largeTitle)
-                .padding()
+            // Small logo at the top
+            HStack {
+                Image("logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 40, height: 40)
+                    .cornerRadius(8)
+                
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
             
             // Form for order details
             Form {

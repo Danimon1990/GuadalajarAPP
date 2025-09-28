@@ -1,5 +1,6 @@
 import SwiftUI
-import FirebaseFirestore // For Codable enhancements like .data(as:)
+import FirebaseFirestore
+import FirebaseAuth // For Codable enhancements like .data(as:)
 
 class OrderViewModel: ObservableObject {
     @Published var menuItems: [MenuItem] = []
@@ -16,6 +17,16 @@ class OrderViewModel: ObservableObject {
     @Published var huesoPriceString: String = "" // Use String for TextField
 
     private var db = Firestore.firestore()
+    @Published var currentUser: User?
+    
+    init() {
+        fetchMenuItems()
+        // Get current authenticated user
+        currentUser = Auth.auth().currentUser
+        if let user = currentUser {
+            loadUserProfile(userId: user.uid)
+        }
+    }
 
     var huesoPrice: Double {
         let parsedValue = Double(huesoPriceString) ?? 0
@@ -37,10 +48,6 @@ class OrderViewModel: ObservableObject {
                 item.name.localizedCaseInsensitiveContains(searchText)
             }
         }
-    }
-
-    init() {
-        fetchMenuItems()
     }
 
     func fetchMenuItems() {
@@ -126,9 +133,10 @@ class OrderViewModel: ObservableObject {
             "clientPhone": clientPhone,
             "clientAddress": clientAddress,
             "items": orderItemsPayload,
-        "totalPrice": totalOrderCost, // Save as "totalPrice"
+            "totalPrice": totalOrderCost, // Save as "totalPrice"
             "platform": "iOS", // Good to distinguish order source
-            "status": "pending" // Initial status for new orders
+            "status": "pending", // Initial status for new orders
+            "userId": currentUser?.uid ?? "" // Link order to authenticated user
         ]
 
         db.collection("orders").addDocument(data: orderData) { [weak self] error in
@@ -159,6 +167,17 @@ class OrderViewModel: ObservableObject {
         huesoPriceString = ""
         searchText = ""
         errorMessage = nil // Clear any previous messages
+    }
+    
+    private func loadUserProfile(userId: String) {
+        db.collection("users").document(userId).getDocument { [weak self] document, error in
+            if let document = document, document.exists {
+                DispatchQueue.main.async {
+                    self?.clientName = document.data()?["name"] as? String ?? ""
+                    self?.clientPhone = document.data()?["phone"] as? String ?? ""
+                }
+            }
+        }
     }
 }
 
